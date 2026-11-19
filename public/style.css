@@ -528,6 +528,42 @@ body {
   margin-top: 4px;
 }
 
+.joint-sweep-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sweep-btn {
+  font-size: 0.73rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  cursor: pointer;
+  letter-spacing: 0.2px;
+}
+
+.sweep-btn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+  transform: translateY(-1px);
+}
+
+.sweep-btn:active {
+  transform: translateY(0);
+}
+
 .config-card, .presets-card, .ik-slider-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);

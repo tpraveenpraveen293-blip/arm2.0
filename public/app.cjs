@@ -957,6 +957,28 @@ function setGripper(angle) {
   transmitCommandThrottled();
 }
 
+// Sweep joint smoothly between 0° and 180°
+function sweepJoint(index, target) {
+  if (index < 0 || index >= NUM_JOINTS) return;
+
+  // If already at target, jump to opposite end to perform fresh full sweep
+  if (target === 180 && Math.abs(targetAngles[index] - 180) < 3) {
+    targetAngles[index] = 0;
+    currentAngles[index] = 0;
+    updateRobotPose(currentAngles);
+  } else if (target === 0 && Math.abs(targetAngles[index] - 0) < 3) {
+    targetAngles[index] = 180;
+    currentAngles[index] = 180;
+    updateRobotPose(currentAngles);
+  }
+
+  targetAngles[index] = target;
+  updateAnglesDisplay();
+  transmitCommandThrottled();
+  const label = (index === 3) ? (target === 0 ? "Clamped (0°)" : "Opened (180°)") : `${target}°`;
+  showToast(`J${index + 1} Sweeping to ${label}`);
+}
+
 // ====================================================================================
 // DIRECTIONAL JOG SYSTEM (FRONT, BACKWARD, LEFT, RIGHT, UP, DOWN)
 // ====================================================================================
@@ -1485,6 +1507,7 @@ function showToast(msg, isError = false) {
 
 // Expose public functions to global scope for HTML onclick bindings
 globalScope.stepJoint = stepJoint;
+globalScope.sweepJoint = sweepJoint;
 globalScope.setGripper = setGripper;
 globalScope.jogDirection = jogDirection;
 globalScope.startContinuousJog = startContinuousJog;
@@ -1503,6 +1526,7 @@ if (typeof module !== 'undefined' && module.exports) {
     PRESETS,
     DIM,
     stepJoint,
+    sweepJoint,
     setGripper,
     jogDirection,
     applyPreset,

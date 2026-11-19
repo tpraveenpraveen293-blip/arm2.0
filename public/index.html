@@ -135,6 +135,14 @@
             <span>Range: 0° - 180°</span>
             <label class="invert-label"><input type="checkbox" id="inv_j1"> Invert</label>
           </div>
+          <div class="joint-sweep-buttons">
+            <button class="sweep-btn" onclick="sweepJoint(0, 0)" title="Sweep Base from 180° back to 0°">
+              <i class="fa-solid fa-rotate-left"></i> 180° ➔ 0°
+            </button>
+            <button class="sweep-btn" onclick="sweepJoint(0, 180)" title="Sweep Base from 0° up to 180°">
+              <i class="fa-solid fa-rotate-right"></i> 0° ➔ 180°
+            </button>
+          </div>
         </div>
 
         <!-- Joint 2: Elbow Pitch (150kg) — D4 / GPIO 2 -->
@@ -153,6 +161,14 @@
           <div class="joint-footer">
             <span>Range: 0° - 180°</span>
             <label class="invert-label"><input type="checkbox" id="inv_j2"> Invert</label>
+          </div>
+          <div class="joint-sweep-buttons">
+            <button class="sweep-btn" onclick="sweepJoint(1, 0)" title="Sweep Elbow from 180° back to 0°">
+              <i class="fa-solid fa-rotate-left"></i> 180° ➔ 0°
+            </button>
+            <button class="sweep-btn" onclick="sweepJoint(1, 180)" title="Sweep Elbow from 0° up to 180°">
+              <i class="fa-solid fa-rotate-right"></i> 0° ➔ 180°
+            </button>
           </div>
         </div>
 
@@ -173,6 +189,14 @@
             <span>Range: 0° - 180°</span>
             <label class="invert-label"><input type="checkbox" id="inv_j3"> Invert</label>
           </div>
+          <div class="joint-sweep-buttons">
+            <button class="sweep-btn" onclick="sweepJoint(2, 0)" title="Sweep Wrist Roll from 180° back to 0°">
+              <i class="fa-solid fa-rotate-left"></i> 180° ➔ 0°
+            </button>
+            <button class="sweep-btn" onclick="sweepJoint(2, 180)" title="Sweep Wrist Roll from 0° up to 180°">
+              <i class="fa-solid fa-rotate-right"></i> 0° ➔ 180°
+            </button>
+          </div>
         </div>
 
         <!-- Joint 4: Gripper Claw (MG996R) — D1 / GPIO 5 -->
@@ -189,6 +213,14 @@
           <div class="joint-footer">
             <span>Range: 0° - 180°</span>
             <label class="invert-label"><input type="checkbox" id="inv_j4"> Invert</label>
+          </div>
+          <div class="joint-sweep-buttons">
+            <button class="sweep-btn" onclick="sweepJoint(3, 0)" title="Clamp Gripper (Sweep to 0°)">
+              <i class="fa-solid fa-angles-down"></i> 180° ➔ 0° Clamp
+            </button>
+            <button class="sweep-btn" onclick="sweepJoint(3, 180)" title="Open Gripper (Sweep to 180°)">
+              <i class="fa-solid fa-angles-up"></i> 0° ➔ 180° Open
+            </button>
           </div>
           <div class="gripper-quick-buttons">
             <button class="btn btn-sm btn-outline" onclick="setGripper(0)"><i class="fa-solid fa-angles-down"></i> Full Clamp</button>
