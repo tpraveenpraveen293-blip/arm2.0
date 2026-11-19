@@ -1,6 +1,6 @@
-# 5-DOF High-Torque Robotic Arm - Live 3D Simulation & Web Controller
+# arm2.0 - High-Torque Robotic Arm 3D Simulation & Controller
 
-Built specifically for the **3x 150 kg Servos + 2x MG996R Servos + ESP8266** robotic arm.
+Built for the **ESP8266 + High-Torque Servos (D5, D4, D2, D1)** robotic arm with live 3D web control, S-curve trajectory easing, and Vercel cloud deployment.
 
 ---
 

@@ -32,21 +32,31 @@ const safeStorage = {
 };
 
 // --- State & Angle Variables ---
-const NUM_JOINTS = 5;
-// J1: Base Pitch, J2: Elbow Pitch, J3: Wrist Pitch, J4: Wrist Roll/Yaw, J5: Gripper
-let targetAngles = [90, 90, 90, 90, 20];
-let currentAngles = [90, 90, 90, 90, 20];
-let jointTrims = [0, 0, 0, 0, 0];
-let isInverted = [false, false, false, false, false];
-let motionSpeed = 40; // deg/sec
+const NUM_JOINTS = 4;
+// J1: Base Pitch (D5), J2: Elbow Pitch (D4), J3: Wrist Roll/Yaw (D2), J4: Gripper (D1)
+let targetAngles = [90, 90, 90, 20];
+let currentAngles = [90, 90, 90, 20];
+let startAngles = [90, 90, 90, 20];
+let prevTargets = [90, 90, 90, 20];
+let motionStartTime = [0, 0, 0, 0];
+let jointTrims = [0, 0, 0, 0];
+let isInverted = [false, false, false, false];
+let motionSpeed = 90; // deg/sec (fast & responsive)
+
+// S-Curve easing (smoothstep: 3t^2 - 2t^3): fast acceleration into peak cruising speed with smooth ease-in & ease-out
+function sCurveEase(t) {
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  return t * t * (3 - 2 * t);
+}
 
 // Presets
 const PRESETS = {
-  home:  [90, 90, 90, 90, 20],
-  rest:  [35, 145, 140, 90, 10],
-  reach: [110, 65, 45, 90, 45],
-  pick:  [135, 45, 30, 90, 85],
-  wave:  [80, 110, 120, 140, 60]
+  home:  [90, 90, 90, 20],
+  rest:  [35, 145, 90, 10],
+  reach: [110, 65, 90, 45],
+  pick:  [135, 45, 90, 85],
+  wave:  [80, 110, 140, 60]
 };
 
 // Physical dimensions in centimeters (scaled to Three.js units)
@@ -79,11 +89,11 @@ let pingStartTime = 0;
 
 // --- Sequencer Globals ---
 let keyframes = [
-  { name: "1. Standoff", angles: [90, 90, 90, 90, 80], duration: 1500 },
-  { name: "2. Descend", angles: [125, 55, 35, 90, 80], duration: 2000 },
-  { name: "3. Grab Object", angles: [125, 55, 35, 90, 5], duration: 1000 },
-  { name: "4. Lift High", angles: [75, 105, 80, 90, 5], duration: 2000 },
-  { name: "5. Deposit", angles: [60, 80, 90, 90, 75], duration: 1500 }
+  { name: "1. Standoff", angles: [90, 90, 90, 80], duration: 1500 },
+  { name: "2. Descend", angles: [125, 55, 90, 80], duration: 2000 },
+  { name: "3. Grab Object", angles: [125, 55, 90, 5], duration: 1000 },
+  { name: "4. Lift High", angles: [75, 105, 90, 5], duration: 2000 },
+  { name: "5. Deposit", angles: [60, 80, 90, 75], duration: 1500 }
 ];
 let isPlayingSeq = false;
 let seqIndex = 0;
@@ -416,7 +426,7 @@ function buildRobotHierarchy() {
   j2Rot.add(link2);
 
   // ---------------------------------------------------------
-  // JOINT 3: WRIST PITCH (150kg)
+  // JOINT 3: WRIST ROLL / YAW (MG996R) — D2 / GPIO 4
   // ---------------------------------------------------------
   const j3Group = new THREE.Group();
   j3Group.position.y = DIM.link2Length + 4.5;
@@ -425,36 +435,17 @@ function buildRobotHierarchy() {
   const j3Rot = new THREE.Group();
   j3Group.add(j3Rot);
 
-  const servo3 = create150kgServoMesh();
-  servo3.position.y = 2;
-  j3Rot.add(servo3);
-
-  // LINK 3: Upper Extension Tube
-  const link3 = createTubeLink(DIM.link3Length, 1.2);
-  link3.position.y = 4.5;
-  j3Rot.add(link3);
-
-  // ---------------------------------------------------------
-  // JOINT 4: WRIST ROLL / YAW (MG996R)
-  // ---------------------------------------------------------
-  const j4Group = new THREE.Group();
-  j4Group.position.y = DIM.link3Length + 4.5;
-  j3Rot.add(j4Group);
-
-  const j4Rot = new THREE.Group();
-  j4Group.add(j4Rot);
-
   const mg996Body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 4.8, 2.2), blackServoMat);
   mg996Body.position.y = 2.4;
   mg996Body.castShadow = true;
-  j4Rot.add(mg996Body);
+  j3Rot.add(mg996Body);
 
   // ---------------------------------------------------------
-  // JOINT 5: GRIPPER CLAW (MG996R Driven)
+  // JOINT 4: GRIPPER CLAW (MG996R Driven) — D1 / GPIO 5
   // ---------------------------------------------------------
   const gripperBase = new THREE.Group();
   gripperBase.position.y = 5.2;
-  j4Rot.add(gripperBase);
+  j3Rot.add(gripperBase);
 
   const palmPlate = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.8, 3.5), blackBracketMat);
   palmPlate.castShadow = true;
@@ -482,7 +473,6 @@ function buildRobotHierarchy() {
     j1Rot,
     j2Rot,
     j3Rot,
-    j4Rot,
     leftJawGroup,
     rightJawGroup,
     endEffectorNode: gripperBase
@@ -501,14 +491,11 @@ function updateRobotPose(angles) {
   // Joint 2: Elbow Pitch
   robotArm.j2Rot.rotation.x = degToRad(angles[1]);
 
-  // Joint 3: Wrist Pitch
-  robotArm.j3Rot.rotation.x = degToRad(angles[2]);
+  // Joint 3: Wrist Roll
+  if (robotArm.j3Rot) robotArm.j3Rot.rotation.y = (angles[2] - 90) * (Math.PI / 180);
 
-  // Joint 4: Wrist Roll
-  robotArm.j4Rot.rotation.y = (angles[3] - 90) * (Math.PI / 180);
-
-  // Joint 5: Gripper
-  const gripRad = (angles[4] / 90) * 0.45;
+  // Joint 4: Gripper (D1)
+  const gripRad = (angles[3] / 180) * 0.75;
   if (robotArm.leftJawGroup) robotArm.leftJawGroup.rotation.z = -gripRad;
   if (robotArm.rightJawGroup) robotArm.rightJawGroup.rotation.z = gripRad;
 
@@ -550,17 +537,32 @@ function animate() {
     lastFpsTime = now;
   }
 
-  // Smooth interpolation of currentAngles toward targetAngles (Simulation)
-  const maxStep = motionSpeed * dt;
+  // S-Curve interpolation of currentAngles toward targetAngles (slow → fast → slow)
 
   for (let i = 0; i < NUM_JOINTS; i++) {
-    const diff = targetAngles[i] - currentAngles[i];
-    if (Math.abs(diff) > 0.05) {
-      if (Math.abs(diff) <= maxStep) {
-        currentAngles[i] = targetAngles[i];
-      } else {
-        currentAngles[i] += (diff > 0) ? maxStep : -maxStep;
-      }
+    // Detect new target → start a new S-curve motion
+    if (Math.abs(targetAngles[i] - prevTargets[i]) > 0.1) {
+      startAngles[i] = currentAngles[i];
+      prevTargets[i] = targetAngles[i];
+      motionStartTime[i] = now;
+    }
+
+    const totalDist = Math.abs(targetAngles[i] - startAngles[i]);
+    if (totalDist < 0.05) {
+      currentAngles[i] = targetAngles[i];
+      continue;
+    }
+
+    // Duration based on distance and speed
+    const durationMs = (totalDist / motionSpeed) * 1000;
+    const elapsed = now - motionStartTime[i];
+    const progress = elapsed / durationMs;
+
+    if (progress >= 1.0) {
+      currentAngles[i] = targetAngles[i];
+    } else {
+      const eased = sCurveEase(progress);
+      currentAngles[i] = startAngles[i] + (targetAngles[i] - startAngles[i]) * eased;
     }
   }
 
@@ -925,11 +927,9 @@ function initUIEvents() {
       else if (key === 's') stepJoint(1, -3);
       else if (key === 'e') stepJoint(2, 3);
       else if (key === 'd') stepJoint(2, -3);
-      else if (key === 'r') stepJoint(3, 3);
-      else if (key === 'f') stepJoint(3, -3);
       else if (e.code === 'Space') {
         e.preventDefault();
-        targetAngles[4] = (targetAngles[4] > 40) ? 0 : 80;
+        targetAngles[3] = (targetAngles[3] > 40) ? 0 : 80;
         updateAnglesDisplay();
         transmitCommandThrottled();
       } else if (key === 'h') {
@@ -944,7 +944,7 @@ function initUIEvents() {
 // Step joint button handler (+1, -1, +5, -5)
 function stepJoint(index, delta) {
   let val = targetAngles[index] + delta;
-  const max = (index === 4) ? 90 : 180;
+  const max = 180;
   val = Math.max(0, Math.min(max, val));
   targetAngles[index] = val;
   updateAnglesDisplay();
@@ -952,7 +952,7 @@ function stepJoint(index, delta) {
 }
 
 function setGripper(angle) {
-  targetAngles[4] = angle;
+  targetAngles[3] = angle;
   updateAnglesDisplay();
   transmitCommandThrottled();
 }
@@ -972,21 +972,19 @@ function jogDirection(dir) {
     targetAngles[0] = Math.max(0, targetAngles[0] - step);
     targetAngles[1] = Math.min(180, targetAngles[1] + (step * 0.7));
   } else if (dir === 'left') {
-    targetAngles[3] = Math.max(0, targetAngles[3] - step * 1.5);
+    targetAngles[2] = Math.max(0, targetAngles[2] - step * 1.5);
   } else if (dir === 'right') {
-    targetAngles[3] = Math.min(180, targetAngles[3] + step * 1.5);
+    targetAngles[2] = Math.min(180, targetAngles[2] + step * 1.5);
   } else if (dir === 'up') {
     targetAngles[0] = Math.max(0, targetAngles[0] - step);
-    targetAngles[1] = Math.max(0, targetAngles[1] - step);
-    targetAngles[2] = Math.min(180, targetAngles[2] + step);
+    targetAngles[1] = Math.min(180, targetAngles[1] + step);
   } else if (dir === 'down') {
     targetAngles[0] = Math.min(180, targetAngles[0] + step);
-    targetAngles[1] = Math.min(180, targetAngles[1] + step);
-    targetAngles[2] = Math.max(0, targetAngles[2] - step);
+    targetAngles[1] = Math.max(0, targetAngles[1] - step);
   } else if (dir === 'clamp') {
-    targetAngles[4] = Math.max(0, targetAngles[4] - 5);
+    targetAngles[3] = Math.max(0, targetAngles[3] - 5);
   } else if (dir === 'open') {
-    targetAngles[4] = Math.min(90, targetAngles[4] + 5);
+    targetAngles[3] = Math.min(180, targetAngles[3] + 5);
   }
 
   updateAnglesDisplay();
@@ -1019,8 +1017,8 @@ function updateAnglesDisplay() {
   }
   const gripText = document.getElementById('gripperStateText');
   if (gripText) {
-    if (targetAngles[4] <= 10) gripText.textContent = "(Clamped)";
-    else if (targetAngles[4] >= 75) gripText.textContent = "(Wide Open)";
+    if (targetAngles[3] <= 15) gripText.textContent = "(Clamped)";
+    else if (targetAngles[3] >= 120) gripText.textContent = "(Wide Open)";
     else gripText.textContent = "(Partial)";
   }
 }
@@ -1134,21 +1132,18 @@ function solveAnalyticalIK(targetX, targetY, targetZ, wristPitchDeg, apply = fal
   // Convert to servo degrees
   let j1 = Math.round((Math.PI / 2 - theta1Rad) * (180 / Math.PI) + 90);
   let j2 = Math.round(180 - (theta2Rad * (180 / Math.PI)));
-  let j3 = Math.round(90 + wristPitchDeg);
-  let j4 = 90;
+  let j3 = 90;
 
   j1 = Math.max(0, Math.min(180, j1));
   j2 = Math.max(0, Math.min(180, j2));
-  j3 = Math.max(0, Math.min(180, j3));
 
   if (apply) {
     targetAngles[0] = j1;
     targetAngles[1] = j2;
     targetAngles[2] = j3;
-    targetAngles[3] = j4;
     updateAnglesDisplay();
     transmitCommandThrottled();
-    showToast(`Applied IK: [${j1}°, ${j2}°, ${j3}°]`);
+    showToast(`Applied IK: [${j1}°, ${j2}°]`);
   }
 
   return true;
@@ -1300,7 +1295,7 @@ function transmitCommandThrottled() {
   // Apply calibration trims and clamp
   const actualAngles = targetAngles.map((ang, i) => {
     let finalAng = ang + (jointTrims[i] || 0);
-    const max = (i === 4) ? 90 : 180;
+    const max = 180;
     return Math.max(0, Math.min(max, Math.round(finalAng)));
   });
 

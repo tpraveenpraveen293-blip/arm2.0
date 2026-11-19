@@ -22,8 +22,8 @@
     <div class="brand">
       <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
       <div class="brand-text">
-        <span class="title">TITAN-ARM 5-DOF</span>
-        <span class="subtitle">3x 150kg + 2x MG996R | ESP8266 Live Hub</span>
+        <span class="title">TITAN-ARM 4-DOF</span>
+        <span class="subtitle">2x 150kg + 2x MG996R | ESP8266 Live Hub</span>
       </div>
     </div>
 
@@ -118,10 +118,10 @@
           <button id="btnHome" class="btn btn-sm btn-outline"><i class="fa-solid fa-house"></i> Home (All 90°)</button>
         </div>
 
-        <!-- Joint 1: Base Pitch / Shoulder (150kg) -->
+        <!-- Joint 1: Base Pitch / Shoulder (150kg) — D5 / GPIO 14 -->
         <div class="joint-card">
           <div class="joint-header">
-            <div class="joint-tag"><span class="badge badge-pink">150 kg</span> J1: Base Pitch / Shoulder</div>
+            <div class="joint-tag"><span class="badge badge-pink">150 kg</span> J1: Base Pitch / Shoulder <small style="opacity:0.5">(D5)</small></div>
             <div class="joint-value"><span id="val_j1">90</span>°</div>
           </div>
           <div class="slider-row">
@@ -137,10 +137,10 @@
           </div>
         </div>
 
-        <!-- Joint 2: Elbow Pitch (150kg) -->
+        <!-- Joint 2: Elbow Pitch (150kg) — D4 / GPIO 2 -->
         <div class="joint-card">
           <div class="joint-header">
-            <div class="joint-tag"><span class="badge badge-pink">150 kg</span> J2: Elbow Pitch</div>
+            <div class="joint-tag"><span class="badge badge-pink">150 kg</span> J2: Elbow Pitch <small style="opacity:0.5">(D4)</small></div>
             <div class="joint-value"><span id="val_j2">90</span>°</div>
           </div>
           <div class="slider-row">
@@ -156,16 +156,16 @@
           </div>
         </div>
 
-        <!-- Joint 3: Wrist Pitch (150kg) -->
+        <!-- Joint 3: Wrist Roll / Yaw (MG996R) — D2 / GPIO 4 -->
         <div class="joint-card">
           <div class="joint-header">
-            <div class="joint-tag"><span class="badge badge-pink">150 kg</span> J3: Wrist Pitch</div>
+            <div class="joint-tag"><span class="badge badge-blue">MG996R</span> J3: Wrist Roll / Yaw <small style="opacity:0.5">(D2)</small></div>
             <div class="joint-value"><span id="val_j3">90</span>°</div>
           </div>
           <div class="slider-row">
             <button class="step-btn" onclick="stepJoint(2, -5)">-5</button>
             <button class="step-btn" onclick="stepJoint(2, -1)">-1</button>
-            <input type="range" id="slider_j3" class="slider slider-pink" min="0" max="180" value="90">
+            <input type="range" id="slider_j3" class="slider slider-blue" min="0" max="180" value="90">
             <button class="step-btn" onclick="stepJoint(2, +1)">+1</button>
             <button class="step-btn" onclick="stepJoint(2, +5)">+5</button>
           </div>
@@ -175,47 +175,32 @@
           </div>
         </div>
 
-        <!-- Joint 4: Wrist Roll / Yaw (MG996R) -->
+        <!-- Joint 4: Gripper Claw (MG996R) — D1 / GPIO 5 -->
         <div class="joint-card">
           <div class="joint-header">
-            <div class="joint-tag"><span class="badge badge-blue">MG996R</span> J4: Wrist Roll / Yaw</div>
-            <div class="joint-value"><span id="val_j4">90</span>°</div>
+            <div class="joint-tag"><span class="badge badge-green">MG996R</span> J4: Gripper Claw <small style="opacity:0.5">(D1)</small></div>
+            <div class="joint-value"><span id="val_j4">20</span>° <small id="gripperStateText">(Closed)</small></div>
           </div>
           <div class="slider-row">
-            <button class="step-btn" onclick="stepJoint(3, -5)">-5</button>
-            <button class="step-btn" onclick="stepJoint(3, -1)">-1</button>
-            <input type="range" id="slider_j4" class="slider slider-blue" min="0" max="180" value="90">
-            <button class="step-btn" onclick="stepJoint(3, +1)">+1</button>
-            <button class="step-btn" onclick="stepJoint(3, +5)">+5</button>
+            <button class="step-btn" onclick="stepJoint(3, -10)">-10</button>
+            <input type="range" id="slider_j4" class="slider slider-green" min="0" max="180" value="20">
+            <button class="step-btn" onclick="stepJoint(3, +10)">+10</button>
           </div>
           <div class="joint-footer">
             <span>Range: 0° - 180°</span>
             <label class="invert-label"><input type="checkbox" id="inv_j4"> Invert</label>
           </div>
-        </div>
-
-        <!-- Joint 5: Gripper Claw (MG996R) -->
-        <div class="joint-card">
-          <div class="joint-header">
-            <div class="joint-tag"><span class="badge badge-green">MG996R</span> J5: Gripper Claw</div>
-            <div class="joint-value"><span id="val_j5">20</span>° <small id="gripperStateText">(Closed)</small></div>
-          </div>
-          <div class="slider-row">
-            <button class="step-btn" onclick="stepJoint(4, -10)">-10</button>
-            <input type="range" id="slider_j5" class="slider slider-green" min="0" max="90" value="20">
-            <button class="step-btn" onclick="stepJoint(4, +10)">+10</button>
-          </div>
           <div class="gripper-quick-buttons">
             <button class="btn btn-sm btn-outline" onclick="setGripper(0)"><i class="fa-solid fa-angles-down"></i> Full Clamp</button>
-            <button class="btn btn-sm btn-outline" onclick="setGripper(45)"><i class="fa-solid fa-hand-scissors"></i> Half Open</button>
-            <button class="btn btn-sm btn-outline" onclick="setGripper(90)"><i class="fa-solid fa-hand"></i> Full Open</button>
+            <button class="btn btn-sm btn-outline" onclick="setGripper(90)"><i class="fa-solid fa-hand-scissors"></i> Half Open</button>
+            <button class="btn btn-sm btn-outline" onclick="setGripper(180)"><i class="fa-solid fa-hand"></i> Full Open</button>
           </div>
         </div>
 
         <!-- Motion Speed & Presets -->
         <div class="config-card">
-          <div class="section-title"><span>Motion Easing Speed</span> <span id="val_speed">40</span> °/s</div>
-          <input type="range" id="slider_speed" class="slider" min="10" max="120" value="40">
+          <div class="section-title"><span>Motion Easing Speed</span> <span id="val_speed">90</span> °/s</div>
+          <input type="range" id="slider_speed" class="slider" min="10" max="250" value="90">
           <div class="speed-hint">Protects 150kg gears and prevents current surges</div>
         </div>
 
@@ -311,18 +296,13 @@
         </div>
 
         <div class="joint-card">
-          <div class="joint-header"><span>J3 Wrist Trim:</span> <span id="val_trim_3">0</span>°</div>
+          <div class="joint-header"><span>J3 Roll Trim:</span> <span id="val_trim_3">0</span>°</div>
           <input type="range" id="trim_j3" class="slider" min="-30" max="30" value="0">
         </div>
 
         <div class="joint-card">
-          <div class="joint-header"><span>J4 Roll Trim:</span> <span id="val_trim_4">0</span>°</div>
+          <div class="joint-header"><span>J4 Gripper Trim:</span> <span id="val_trim_4">0</span>°</div>
           <input type="range" id="trim_j4" class="slider" min="-30" max="30" value="0">
-        </div>
-
-        <div class="joint-card">
-          <div class="joint-header"><span>J5 Gripper Trim:</span> <span id="val_trim_5">0</span>°</div>
-          <input type="range" id="trim_j5" class="slider" min="-30" max="30" value="0">
         </div>
 
         <!-- Hotkeys Cheatsheet -->
@@ -331,8 +311,7 @@
           <div class="hotkey-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:0.75rem;font-family:var(--font-mono);">
             <div><kbd class="badge">Q / A</kbd> Base Up/Down</div>
             <div><kbd class="badge">W / S</kbd> Elbow Up/Dn</div>
-            <div><kbd class="badge">E / D</kbd> Wrist Up/Dn</div>
-            <div><kbd class="badge">R / F</kbd> Roll L/R</div>
+            <div><kbd class="badge">E / D</kbd> Roll L/R</div>
             <div><kbd class="badge">Space</kbd> Grip Toggle</div>
             <div><kbd class="badge">H</kbd> Home (90°)</div>
             <div><kbd class="badge">Esc</kbd> Emergency Stop</div>
